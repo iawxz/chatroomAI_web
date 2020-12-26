@@ -22,4 +22,12 @@ npm run lint
 
 ### Customize configuration
 See [Configuration Reference](https://cli.vuejs.org/config/).
+
 # chatroom_ai
+
+命名规则：
+
+数据名称使用下划线命名，如chat_room_ai
+
+类名使用驼峰，如chatRoomAi
+
