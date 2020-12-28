@@ -15,7 +15,10 @@
               v-for="(item, index) in chats"
               :key="index"
             >
-              <div class="chatBubbleTime" v-if="item.send_timestamp">
+              <div
+                class="chatBubbleTime"
+                v-if="item.send_timestamp && item.time_show"
+              >
                 <span>{{ item.show_time }}</span>
               </div>
               <div
@@ -59,32 +62,27 @@ export default {
         {
           sender: 0, //发送人，0机器人1用户
           send_con: "你好，我是法保网智能客服，有问题请咨询我!",
-          send_timestamp: "1607583703", //发送时间,存时间戳好进行判断，若聊天间隔3分钟内，不重复显示时间          
-          show_time: "星期一 15:01",
+          send_timestamp: "1607731220000", //发送时间,存时间戳好进行判断，若聊天间隔3分钟内，不重复显示时间
         },
         {
           sender: 1,
           send_con: "你好，你能干嘛？",
-          send_timestamp: "1607583730",
-          show_time: "今天 15:01",
+          send_timestamp: "1608872420000",
         },
         {
           sender: 0,
           send_con: "你可以让我帮你找合同模板、法律案例、这些东西",
-          send_timestamp: "1607583735",
-          show_time: "2020-12-26 15:01:43",
+          send_timestamp: "1608873420000",
         },
         {
           sender: 1,
           send_con: "我需要一些劳动仲裁官司的案例",
-          send_timestamp: "1607929330",
-          show_time: "2020-12-26 15:08:56",
+          send_timestamp: "1609138820000",
         },
         {
           sender: 0,
           send_con: "好的，我这就为你去找...",
-          send_timestamp: "1607929336",
-          show_time: "2020-12-26 15:08:56",
+          send_timestamp: "1609138830000",
         },
       ],
       // 辅助工具
@@ -114,8 +112,67 @@ export default {
   },
   props: {},
   components: {},
-  created () {
-    
+  created() {
+    var now_timestamp = Date.parse(new Date());
+    var minute_timestamp = 3 * 60 * 1000; //3分钟
+    var day_timestamp = 24 * 60 * 60 * 1000; //1天
+    var week_timestamp = day_timestamp * 7; //7天
+
+    var i = 0;
+    for (var chat of this.chats) {
+      var howlong = now_timestamp - chat.send_timestamp;
+      var time = new Date(parseInt(chat.send_timestamp));
+      var hour = time.getHours().toString();
+      if (hour.length < 2) {
+        hour = "0" + hour;
+      }
+      var minute = time.getMinutes().toString();
+      if (minute.length < 2) {
+        minute = "0" + minute;
+      }
+      // 展示时间格式
+      if (howlong > week_timestamp) {
+        //距今7天以上，显示日期
+        var year = time.getFullYear().toString();
+        var month = (time.getMonth() + 1).toString();
+        if (month.length < 2) {
+          month = "0" + month;
+        }
+        var day = time.getDate().toString();
+        if (day.length < 2) {
+          day = "0" + day;
+        }
+        chat.show_time =
+          year + "年" + month + "月" + day + "日 " + hour + ":" + minute;
+      } else if (howlong > day_timestamp) {
+        // 距今7天以内超过1天，显示星期
+        var weekdays = [
+          "星期天",
+          "星期一",
+          "星期二",
+          "星期三",
+          "星期四",
+          "星期五",
+          "星期六",
+        ];
+        var weekday = time.getDay().toString();
+        chat.show_time = weekdays[weekday] + " " + hour + ":" + minute;
+      } else {
+        // 24小时内，显示今天
+        chat.show_time = "今天 " + hour + ":" + minute;
+      }
+      // 是否展示时间
+      this.chats[0].time_show = true;
+      if (i > 0) {
+        var interval = chat.send_timestamp - this.chats[i - 1].send_timestamp;
+        if (interval > minute_timestamp) {
+          chat.time_show = true;
+        } else {
+          chat.time_show = false;
+        }
+      }
+      i++;
+    }
   },
   mounted() {},
   methods: {},
