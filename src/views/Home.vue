@@ -9,7 +9,7 @@
         <!-- 聊天区域 -->
         <div class="chatBox">
           <!-- 聊天窗 -->
-          <div class="chatWindow">
+          <div class="chatWindow" id="chatWindow">
             <div
               class="chatBubbleBox"
               v-for="(item, index) in chats"
@@ -26,26 +26,57 @@
                 :class="{ chatBubbleUser: item.sender != 0 }"
               >
                 <div name="亮亮" class="avatar" v-if="item.sender == 0"></div>
-                <span>{{ item.send_con }}</span>
+                <div class="msgBox">
+                  <div class="bubbleBox" v-if="item.sender == 1">
+                    <p>{{ item.send_con }}</p>
+                  </div>
+                  <div
+                    class="bubbleBox"
+                    v-else-if="item.sender == 0 && item.send_con[0].msgInfo"
+                  >
+                    <p
+                      v-for="(item_msg, index_msg) in item.send_con"
+                      :key="index_msg"
+                    >
+                      {{ item_msg.msgInfo }}
+                    </p>
+                  </div>
+                  <div class="bubbleBox" v-else-if="item.sender == 0">
+                    <p>{{ item.send_con }}</p>
+                  </div>
+                  <div class="bubbleBox" v-if="item.sender == 0 && item.list">
+                    <p style="margin-bottom:0">{{ item.list }}</p>
+                  </div>
+                </div>
               </div>
             </div>
           </div>
           <!-- 聊天输入框 -->
           <div class="chatInput">
-            <textarea placeholder="请输入您的问题..."></textarea>
-            <div class="sendBtn">发送</div>
+            <textarea
+              placeholder="请输入您的问题..."
+              v-model="message"
+              @keydown="stopEnter"
+              @keyup.enter="send"
+            ></textarea>
+            <div class="sendBtn" @click="send">发送</div>
           </div>
         </div>
         <!-- 辅助工具 -->
         <div class="tools">
-          <div class="toolsBox">
+          <div class="toolsBox" v-if="tool_show == -1">
             <img
               v-for="(item, index) in tools"
               :key="index"
               :src="item.img"
               :alt="item.name"
+              @click="getTool(index)"
             />
           </div>
+          <legislation v-else-if="tool_show == 0"></legislation>
+          <lawcase v-else-if="tool_show == 1"></lawcase>
+          <dispute v-else-if="tool_show == 2"></dispute>
+          <aidedtools v-else-if="tool_show == 3"></aidedtools>
         </div>
       </div>
     </div>
@@ -53,10 +84,18 @@
 </template>
 
 <script>
+import legislation from "../components/tool_legislation";
+import lawcase from "../components/tool_case";
+import dispute from "../components/tool_dispute";
+import aidedtools from "../components/tool_aidedtools";
 export default {
   name: "Home",
   data() {
     return {
+      userid: "23941",
+      // 待发送信息
+      message: "",
+      isEnter: false, //是否处于停止回车
       // 聊天记录
       chats: [
         {
@@ -108,74 +147,196 @@ export default {
           img: require("../assets/chatroom/tool_4.png"),
         },
       ],
+      tool_show: -1, //展示的工具，-1工具栏，0法规搜索，1案例搜索，2解纷方式，3辅助工具
     };
   },
   props: {},
-  components: {},
+  components: {
+    legislation,
+    lawcase,
+    dispute,
+    aidedtools,
+  },
   created() {
-    var now_timestamp = Date.parse(new Date());
-    var minute_timestamp = 3 * 60 * 1000; //3分钟
-    var day_timestamp = 24 * 60 * 60 * 1000; //1天
-    var week_timestamp = day_timestamp * 7; //7天
-
-    var i = 0;
-    for (var chat of this.chats) {
-      var howlong = now_timestamp - chat.send_timestamp;
-      var time = new Date(parseInt(chat.send_timestamp));
-      var hour = time.getHours().toString();
-      if (hour.length < 2) {
-        hour = "0" + hour;
-      }
-      var minute = time.getMinutes().toString();
-      if (minute.length < 2) {
-        minute = "0" + minute;
-      }
-      // 展示时间格式
-      if (howlong > week_timestamp) {
-        //距今7天以上，显示日期
-        var year = time.getFullYear().toString();
-        var month = (time.getMonth() + 1).toString();
-        if (month.length < 2) {
-          month = "0" + month;
-        }
-        var day = time.getDate().toString();
-        if (day.length < 2) {
-          day = "0" + day;
-        }
-        chat.show_time =
-          year + "年" + month + "月" + day + "日 " + hour + ":" + minute;
-      } else if (howlong > day_timestamp) {
-        // 距今7天以内超过1天，显示星期
-        var weekdays = [
-          "星期天",
-          "星期一",
-          "星期二",
-          "星期三",
-          "星期四",
-          "星期五",
-          "星期六",
-        ];
-        var weekday = time.getDay().toString();
-        chat.show_time = weekdays[weekday] + " " + hour + ":" + minute;
-      } else {
-        // 24小时内，显示今天
-        chat.show_time = "今天 " + hour + ":" + minute;
-      }
-      // 是否展示时间
-      this.chats[0].time_show = true;
-      if (i > 0) {
-        var interval = chat.send_timestamp - this.chats[i - 1].send_timestamp;
-        if (interval > minute_timestamp) {
-          chat.time_show = true;
-        } else {
-          chat.time_show = false;
-        }
-      }
-      i++;
+    // localStorage.removeItem("chatsHistory");
+    this.chats = JSON.parse(localStorage.getItem("chatsHistory"));
+    if (!this.chats) {
+      var chat = [
+        {
+          sender: 0, //发送人，0机器人1用户
+          send_con: "你好，我是法保网智能客服，有问题请咨询我!",
+        },
+      ];
+      chat[0].send_timestamp = this.getTime();
+      localStorage.setItem("chatsHistory", JSON.stringify(chat));
+      this.chats = JSON.parse(localStorage.getItem("chatsHistory"));
+      this.getIsShowTime();
+    } else {
+      this.getIsShowTime();
     }
   },
-  mounted() {},
-  methods: {},
+  mounted() {
+    this.chatWindowActive();
+  },
+  methods: {
+    // 原回车键失去回车功能
+    stopEnter(event) {
+      if (event.keyCode === 13) {
+        event.preventDefault(); // 阻止浏览器默认换行操作
+        return false;
+      }
+    },
+    // 获取当前时间戳
+    getTime() {
+      var now_timestamp = Date.parse(new Date());
+      return now_timestamp;
+    },
+    // 获取是否展示时间的标志
+    getIsShowTime() {
+      var now_timestamp = Date.parse(new Date());
+      var minute_timestamp = 3 * 60 * 1000; //3分钟
+      var day_timestamp = 24 * 60 * 60 * 1000; //1天
+      var week_timestamp = day_timestamp * 7; //7天
+
+      var i = 0;
+      for (var chat of this.chats) {
+        var howlong = now_timestamp - chat.send_timestamp;
+        var time = new Date(parseInt(chat.send_timestamp));
+        var hour = time.getHours().toString();
+        if (hour.length < 2) {
+          hour = "0" + hour;
+        }
+        var minute = time.getMinutes().toString();
+        if (minute.length < 2) {
+          minute = "0" + minute;
+        }
+        // 展示时间格式
+        if (howlong > week_timestamp) {
+          //距今7天以上，显示日期
+          var year = time.getFullYear().toString();
+          var month = (time.getMonth() + 1).toString();
+          if (month.length < 2) {
+            month = "0" + month;
+          }
+          var day = time.getDate().toString();
+          if (day.length < 2) {
+            day = "0" + day;
+          }
+          chat.show_time =
+            year + "年" + month + "月" + day + "日 " + hour + ":" + minute;
+        } else if (howlong > day_timestamp) {
+          // 距今7天以内超过1天，显示星期
+          var weekdays = [
+            "星期天",
+            "星期一",
+            "星期二",
+            "星期三",
+            "星期四",
+            "星期五",
+            "星期六",
+          ];
+          var weekday = time.getDay().toString();
+          chat.show_time = weekdays[weekday] + " " + hour + ":" + minute;
+        } else {
+          // 24小时内，显示今天
+          var day_now = new Date(parseInt(now_timestamp)).getDate();
+          var day_time = time.getDate();
+          if (day_now == day_time) {
+            chat.show_time = "今天 " + hour + ":" + minute;
+          } else {
+            chat.show_time = "昨天 " + hour + ":" + minute;
+          }
+        }
+        // 是否展示时间
+        this.chats[0].time_show = true;
+        if (i > 0) {
+          var interval = chat.send_timestamp - this.chats[i - 1].send_timestamp;
+          if (interval > minute_timestamp) {
+            chat.time_show = true;
+          } else {
+            chat.time_show = false;
+          }
+        }
+        i++;
+      }
+    },
+    // 聊天窗内容置底
+    chatWindowActive() {
+      this.$nextTick(() => {
+        var div = document.getElementById("chatWindow");
+        div.scrollTop = div.scrollHeight;
+      });
+    },
+    // 发送消息
+    send() {
+      if (this.message == "") {
+        alert("不能发送空白信息");
+        return;
+      }
+      this.chats.push({
+        sender: 1,
+        send_con: this.message,
+        send_timestamp: this.getTime(),
+      });
+      this.getIsShowTime();
+      this.chatWindowActive();
+      let message = this.message;
+      this.message = "";
+      this.$axios({
+        url: "http://rpai.365lawhelp.com/api/Reply/getReply",
+        method: "post",
+        data: {
+          message,
+          appuid: "23941", //测试使用id
+        },
+      }).then((res) => {
+        console.log(res);
+        if (
+          res.data.replayType == "NEEDCONTRACTUSER" ||
+          res.data.replayType == "MSG" ||
+          res.data.replayType == "UNKNOWN"
+        ) {
+          this.chats.push({
+            sender: 0,
+            send_con: res.data.msgInfos,
+            send_timestamp: this.getTime(),
+            type: res.data.replayType,
+          });
+        } else {
+          let all;
+          if (res.data.replayType == "QA") {
+            all = res.data.replyQADatas;
+          } else if (res.data.replayType == "CONTRACT") {
+            all = res.data.replyContractDatas;
+          } else if (res.data.replayType == "LAW") {
+            all = res.data.replyLawDatas;
+          } else if (res.data.replayType == "CASE") {
+            all = res.data.replyCaseDatas;
+          }
+          let list = [];
+          for (let i = 0; i < 5; i++) {
+            if (all[i]) {
+              list.push(all[i]);
+            }
+          }
+          this.chats.push({
+            sender: 0,
+            send_con: res.data.msgInfos,
+            send_timestamp: this.getTime(),
+            type: res.data.replayType,
+            list,
+          });
+        }
+        this.getIsShowTime();
+        this.chatWindowActive();
+        console.log(this.chats);
+      });
+    },
+    // 获取工具
+    getTool(index) {
+      this.tool_show = index;
+    },
+  },
 };
 </script>
 
@@ -264,6 +425,7 @@ export default {
               display: flex;
               align-items: flex-start;
               justify-content: flex-start;
+              flex-wrap: wrap;
               .avatar {
                 width: 45px;
                 height: 45px;
@@ -271,17 +433,20 @@ export default {
                 background-color: #ffffff;
                 margin-right: 10px;
               }
-              span {
+              .msgBox {
                 max-width: 50%;
-
-                font-size: 15px;
-                font-family: PingFang SC;
-                color: #3b3b3b;
-
-                display: inline-block;
-                padding: 12.5px 20px;
-                background: #ffffff;
-                border-radius: 10px;
+                .bubbleBox {                  
+                  p {
+                    font-size: 15px;
+                    font-family: PingFang SC;
+                    color: #3b3b3b;
+                    display: inline-block;
+                    padding: 12.5px 20px;
+                    background: #ffffff;
+                    border-radius: 10px;
+                    margin-bottom: 16px;
+                  }                  
+                }
               }
             }
             .chatBubbleUser {
