@@ -44,8 +44,22 @@
                   <div class="bubbleBox" v-else-if="item.sender == 0">
                     <p>{{ item.send_con }}</p>
                   </div>
-                  <div class="bubbleBox" v-if="item.sender == 0 && item.list">
-                    <p style="margin-bottom:0">{{ item.list }}</p>
+                  <div
+                    class="bubbleBox listBox"
+                    v-if="item.sender == 0 && item.list"
+                  >
+                    <div
+                      class="bubbleList"
+                      v-for="(item_list, index_list) in item.list"
+                      :key="index_list"
+                      @click="goDetail(item_list)"
+                    >
+                      <div class="listTitle">{{ item_list.title }}</div>
+                      <img
+                        src="../assets/chatroom/icon_getmore.png"
+                        alt="查看详情"
+                      />
+                    </div>
                   </div>
                 </div>
               </div>
@@ -77,6 +91,10 @@
           <lawcase v-else-if="tool_show == 1"></lawcase>
           <dispute v-else-if="tool_show == 2"></dispute>
           <aidedtools v-else-if="tool_show == 3"></aidedtools>
+          <replayDetail
+            :detail="replyDetail"
+            v-else-if="tool_show == -2"
+          ></replayDetail>
         </div>
       </div>
     </div>
@@ -88,6 +106,7 @@ import legislation from "../components/tool_legislation";
 import lawcase from "../components/tool_case";
 import dispute from "../components/tool_dispute";
 import aidedtools from "../components/tool_aidedtools";
+import replayDetail from "../components/tool_replayDetail";
 export default {
   name: "Home",
   data() {
@@ -124,6 +143,8 @@ export default {
           send_timestamp: "1609138830000",
         },
       ],
+      // 答复详情
+      replyDetail: {},
       // 辅助工具
       tools: [
         {
@@ -156,6 +177,7 @@ export default {
     lawcase,
     dispute,
     aidedtools,
+    replayDetail,
   },
   created() {
     // localStorage.removeItem("chatsHistory");
@@ -260,6 +282,11 @@ export default {
         i++;
       }
     },
+    // 查看详情
+    goDetail(item) {
+      this.tool_show = -2;
+      this.replyDetail = item;
+    },
     // 聊天窗内容置底
     chatWindowActive() {
       this.$nextTick(() => {
@@ -290,7 +317,6 @@ export default {
           appuid: "23941", //测试使用id
         },
       }).then((res) => {
-        console.log(res);
         if (
           res.data.replayType == "NEEDCONTRACTUSER" ||
           res.data.replayType == "MSG" ||
@@ -329,7 +355,17 @@ export default {
         }
         this.getIsShowTime();
         this.chatWindowActive();
-        console.log(this.chats);
+        // 将对话存进聊天记录
+        let len = this.chats.length;
+        let chats = [];
+        for (let i = 1; i <= 20; i++) {
+          // unshift 将新项添加到数组起始位置
+          // 这里是倒着把this.chats的最近20条数据作为历史记录插入chats数组
+          if (this.chats[len - i]) {
+            chats.unshift(this.chats[len - i]);
+          }
+        }
+        localStorage.setItem("chatsHistory", JSON.stringify(chats));
       });
     },
     // 获取工具
@@ -435,7 +471,7 @@ export default {
               }
               .msgBox {
                 max-width: 50%;
-                .bubbleBox {                  
+                .bubbleBox {
                   p {
                     font-size: 15px;
                     font-family: PingFang SC;
@@ -445,7 +481,36 @@ export default {
                     background: #ffffff;
                     border-radius: 10px;
                     margin-bottom: 16px;
-                  }                  
+                  }
+                }
+                .listBox {
+                  padding: 12.5px 20px;
+                  background: #ffffff;
+                  border-radius: 10px;
+                  .bubbleList {
+                    cursor: pointer;
+                    border-bottom: 1px solid #f2f2f2;
+                    display: flex;
+                    align-items: center;
+                    justify-content: space-between;
+                    .listTitle {
+                      width: 90%;
+                      height: 30px;
+                      line-height: 30px;
+
+                      font-size: 14px;
+                      font-family: PingFang SC;
+                      color: #3699ff;
+
+                      text-overflow: ellipsis;
+                      overflow: hidden;
+                      white-space: nowrap;
+                    }
+                    img {
+                      width: 9px;
+                      height: 16px;
+                    }
+                  }
                 }
               }
             }
