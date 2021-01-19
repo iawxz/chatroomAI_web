@@ -10,6 +10,13 @@
         <div class="chatBox">
           <!-- 聊天窗 -->
           <div class="chatWindow" id="chatWindow">
+            <div class="loading" v-if="isLoading">
+              <img
+                class="loadingImg"
+                src="../assets/loading.gif"
+                alt="加载中"
+              />
+            </div>
             <div
               class="chatBubbleBox"
               v-for="(item, index) in chats"
@@ -54,7 +61,9 @@
                       :key="index_list"
                       @click="goDetail(item_list)"
                     >
-                      <div class="listTitle">{{ item_list.title }}</div>
+                      <div class="listTitle">
+                        {{ item_list.title || item_list.lawTitle }}
+                      </div>
                       <img
                         src="../assets/chatroom/icon_getmore.png"
                         alt="查看详情"
@@ -169,6 +178,7 @@ export default {
         },
       ],
       tool_show: -1, //展示的工具，-1工具栏，0法规搜索，1案例搜索，2解纷方式，3辅助工具
+      isLoading: 0, //是否正在加载中，0否1是
     };
   },
   props: {},
@@ -309,6 +319,7 @@ export default {
       this.chatWindowActive();
       let message = this.message;
       this.message = "";
+      this.isLoading = 1; //加载中
       this.$axios({
         url: "http://rpai.365lawhelp.com/api/Reply/getReply",
         method: "post",
@@ -317,17 +328,23 @@ export default {
           appuid: "23941", //测试使用id
         },
       }).then((res) => {
+        var that = this;
         if (
           res.data.replayType == "NEEDCONTRACTUSER" ||
           res.data.replayType == "MSG" ||
           res.data.replayType == "UNKNOWN"
         ) {
-          this.chats.push({
-            sender: 0,
-            send_con: res.data.msgInfos,
-            send_timestamp: this.getTime(),
-            type: res.data.replayType,
-          });
+          setTimeout(function () {
+            that.chats.push({
+              sender: 0,
+              send_con: res.data.msgInfos,
+              send_timestamp: that.getTime(),
+              type: res.data.replayType,
+            });
+            that.isLoading = 0;
+            that.getIsShowTime();
+            that.chatWindowActive();
+          }, 1000);
         } else {
           let all;
           if (res.data.replayType == "QA") {
@@ -344,17 +361,20 @@ export default {
             if (all[i]) {
               list.push(all[i]);
             }
-          }
-          this.chats.push({
-            sender: 0,
-            send_con: res.data.msgInfos,
-            send_timestamp: this.getTime(),
-            type: res.data.replayType,
-            list,
-          });
+          }          
+          setTimeout(function () {
+            that.chats.push({
+              sender: 0,
+              send_con: res.data.msgInfos,
+              send_timestamp: that.getTime(),
+              type: res.data.replayType,
+              list,
+            });
+            that.isLoading = 0;
+            that.getIsShowTime();
+            that.chatWindowActive();
+          }, 1000);
         }
-        this.getIsShowTime();
-        this.chatWindowActive();
         // 将对话存进聊天记录
         let len = this.chats.length;
         let chats = [];
@@ -438,7 +458,21 @@ export default {
           border-bottom: 4px solid #e6e6e6;
           overflow-y: scroll;
           padding: 0 40px;
-
+          position: relative;
+          .loading {
+            position: fixed;
+            top: 48%;
+            left: 36.5%;
+            transform: translate(-50%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            img {
+              display: block;
+              width: 240px;
+              height: 60px;
+            }
+          }
           .chatBubbleBox {
             .chatBubbleTime {
               text-align: center;
@@ -466,7 +500,11 @@ export default {
                 width: 45px;
                 height: 45px;
                 border-radius: 50%;
-                background-color: #ffffff;
+                // background-color: #ffffff;
+                background-image: url("../assets/avatar.png");
+                background-size: cover;
+                background-position: center;
+                background-repeat: no-repeat;
                 margin-right: 10px;
               }
               .msgBox {
