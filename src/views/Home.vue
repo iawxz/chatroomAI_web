@@ -65,7 +65,7 @@
                         {{
                           item_list.title ||
                           item_list.lawTitle ||
-                          item_list.contractName||
+                          item_list.contractName ||
                           item_list.caseTitle
                         }}
                       </div>
@@ -129,7 +129,7 @@ export default {
       // 待发送信息
       message: "",
       isEnter: false, //是否处于停止回车
-      // 聊天记录
+      // 聊天记录(假设)
       chats: [
         {
           sender: 0, //发送人，0机器人1用户
@@ -299,8 +299,12 @@ export default {
     },
     // 查看详情
     goDetail(item) {
-      this.tool_show = -2;
-      this.replyDetail = item;
+      if (item.contractName) {//答复类型为“合同”
+        return;
+      } else {
+        this.tool_show = -2;
+        this.replyDetail = item;
+      }
     },
     // 聊天窗内容置底
     chatWindowActive() {
@@ -349,17 +353,21 @@ export default {
             that.isLoading = 0;
             that.getIsShowTime();
             that.chatWindowActive();
-            that.updateHistory(that.chats.length)
+            that.updateHistory(that.chats.length);
           }, 1000);
         } else {
           let all;
           if (res.data.replayType == "QA") {
+            //输入"你能做些什么"测试，右侧进入问答页面
             all = res.data.replyQADatas;
           } else if (res.data.replayType == "CONTRACT") {
+            //输入"劳动合同"测试，跳转下载链接
             all = res.data.replyContractDatas;
           } else if (res.data.replayType == "LAW") {
+            //输入"宪法"测试，右侧进入法律页面
             all = res.data.replyLawDatas;
           } else if (res.data.replayType == "CASE") {
+            //输入"强奸案案例"测试，右侧进入案例页面
             all = res.data.replyCaseDatas;
           }
           let list = [];
@@ -379,7 +387,7 @@ export default {
             that.isLoading = 0;
             that.getIsShowTime();
             that.chatWindowActive();
-            that.updateHistory(that.chats.length)
+            that.updateHistory(that.chats.length);
           }, 1000);
         }
       });
@@ -387,8 +395,6 @@ export default {
     // 更新聊天记录
     updateHistory(len) {
       let chats = [];
-      console.log(this.chats);
-      console.log(len);
       for (let i = 1; i <= 20; i++) {
         // unshift 将新项添加到数组起始位置
         // 这里是倒着把this.chats的最近20条数据作为历史记录插入chats数组
@@ -396,7 +402,6 @@ export default {
           chats.unshift(this.chats[len - i]);
         }
       }
-      console.log(chats);
       localStorage.setItem("chatsHistory", JSON.stringify(chats));
     },
     // 获取工具
