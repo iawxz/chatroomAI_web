@@ -62,7 +62,12 @@
                       @click="goDetail(item_list)"
                     >
                       <div class="listTitle">
-                        {{ item_list.title || item_list.lawTitle }}
+                        {{
+                          item_list.title ||
+                          item_list.lawTitle ||
+                          item_list.contractName||
+                          item_list.caseTitle
+                        }}
                       </div>
                       <img
                         src="../assets/chatroom/icon_getmore.png"
@@ -344,6 +349,7 @@ export default {
             that.isLoading = 0;
             that.getIsShowTime();
             that.chatWindowActive();
+            that.updateHistory(that.chats.length)
           }, 1000);
         } else {
           let all;
@@ -361,7 +367,7 @@ export default {
             if (all[i]) {
               list.push(all[i]);
             }
-          }          
+          }
           setTimeout(function () {
             that.chats.push({
               sender: 0,
@@ -373,20 +379,25 @@ export default {
             that.isLoading = 0;
             that.getIsShowTime();
             that.chatWindowActive();
+            that.updateHistory(that.chats.length)
           }, 1000);
         }
-        // 将对话存进聊天记录
-        let len = this.chats.length;
-        let chats = [];
-        for (let i = 1; i <= 20; i++) {
-          // unshift 将新项添加到数组起始位置
-          // 这里是倒着把this.chats的最近20条数据作为历史记录插入chats数组
-          if (this.chats[len - i]) {
-            chats.unshift(this.chats[len - i]);
-          }
-        }
-        localStorage.setItem("chatsHistory", JSON.stringify(chats));
       });
+    },
+    // 更新聊天记录
+    updateHistory(len) {
+      let chats = [];
+      console.log(this.chats);
+      console.log(len);
+      for (let i = 1; i <= 20; i++) {
+        // unshift 将新项添加到数组起始位置
+        // 这里是倒着把this.chats的最近20条数据作为历史记录插入chats数组
+        if (this.chats[len - i]) {
+          chats.unshift(this.chats[len - i]);
+        }
+      }
+      console.log(chats);
+      localStorage.setItem("chatsHistory", JSON.stringify(chats));
     },
     // 获取工具
     getTool(index) {
