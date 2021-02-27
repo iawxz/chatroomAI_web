@@ -299,7 +299,9 @@ export default {
     },
     // 查看详情
     goDetail(item) {
-      if (item.contractName) {//答复类型为“合同”
+      if (item.contractName) {
+        //答复类型为“合同”
+        alert("程序员还在开发中...");
         return;
       } else {
         this.tool_show = -2;
