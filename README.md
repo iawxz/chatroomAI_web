@@ -1,4 +1,4 @@
-# chatroom_ai
+# chatroomAI_web
 
 ## Project setup
 ```
